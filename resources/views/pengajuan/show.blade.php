@@ -1,0 +1,163 @@
+@extends('layouts.app')
+@section('title',$pengajuan->no_pengajuan)
+@section('page-title','Detail Pengajuan')
+@section('breadcrumb')
+<li class="breadcrumb-item"><a href="{{ route('pengajuan.index') }}">Pengajuan</a></li>
+<li class="breadcrumb-item active">{{ $pengajuan->no_pengajuan }}</li>
+@endsection
+@section('content')
+<div class="row">
+  <div class="col-md-8">
+    <div class="card card-outline card-primary">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="card-title"><i class="fas fa-file-alt mr-2"></i>{{ $pengajuan->no_pengajuan }}</h3>
+        <span class="badge {{ $pengajuan->status_badge }}" style="font-size:13px;padding:6px 14px">{{ $pengajuan->status_label }}</span>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <dl class="row mb-0" style="font-size:13px">
+              <dt class="col-5">Pengaju</dt><dd class="col-7">{{ $pengajuan->user->name }}</dd>
+              <dt class="col-5">Divisi</dt><dd class="col-7">{{ $pengajuan->divisi->nama_divisi }}</dd>
+              <dt class="col-5">Keperluan</dt><dd class="col-7">{{ $pengajuan->keperluan }}</dd>
+              <dt class="col-5">Tgl Pengajuan</dt><dd class="col-7">{{ $pengajuan->tanggal_pengajuan?->format('d/m/Y')??'-' }}</dd>
+              <dt class="col-5">Tgl Dibutuhkan</dt><dd class="col-7">{{ $pengajuan->tanggal_dibutuhkan?->format('d/m/Y')??'-' }}</dd>
+            </dl>
+          </div>
+          <div class="col-md-6">
+            <dl class="row mb-0" style="font-size:13px">
+              <dt class="col-5">Total Nilai</dt>
+              <dd class="col-7 font-weight-bold" style="color:{{ $pengajuan->isDiatas10Juta()?'#DC2626':'#1E293B' }}">{{ $pengajuan->total_nilai_format }}</dd>
+              <dt class="col-5">Jalur Approval</dt>
+              <dd class="col-7">
+                @if($pengajuan->jalur_approval)
+                <span class="badge {{ $pengajuan->jalur_approval=='direktur'?'badge-danger':'badge-warning' }}">{{ $pengajuan->jalur_approval=='direktur'?'Direktur':'Wakil Direktur' }}</span>
+                @else<span class="text-muted">-</span>@endif
+              </dd>
+              <dt class="col-5">Keterangan</dt><dd class="col-7">{{ $pengajuan->keterangan??'-' }}</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card card-outline card-secondary">
+      <div class="card-header"><h3 class="card-title"><i class="fas fa-boxes mr-2"></i>Detail Barang</h3></div>
+      <div class="card-body p-0">
+        <table class="table table-sm table-bordered mb-0">
+          <thead class="thead-light"><tr><th>Barang</th><th class="text-center">Jml Diminta</th><th class="text-center">Jml Disetujui</th><th>Harga Est.</th><th>Subtotal</th></tr></thead>
+          <tbody>
+            @foreach($pengajuan->details as $d)
+            <tr>
+              <td><strong style="font-size:13px">{{ $d->barang->nama_barang }}</strong><br><small class="text-muted">{{ $d->barang->kode_barang }} | {{ $d->barang->satuan }}</small></td>
+              <td class="text-center">{{ $d->jumlah_diminta }}</td>
+              <td class="text-center">{{ $d->jumlah_disetujui??'-' }}</td>
+              <td>{{ $d->harga_estimasi_format }}</td>
+              <td class="font-weight-bold">{{ $d->subtotal_format }}</td>
+            </tr>
+            @endforeach
+          </tbody>
+          <tfoot>
+            <tr style="background:#F8FAFC"><td colspan="4" class="text-right font-weight-bold">TOTAL</td>
+              <td class="font-weight-bold" style="color:{{ $pengajuan->isDiatas10Juta()?'#DC2626':'#059669' }}">{{ $pengajuan->total_nilai_format }}</td></tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    {{-- Aksi --}}
+    @php $u=auth()->user();$s=$pengajuan->status->value; @endphp
+    <div class="card card-outline card-warning">
+      <div class="card-header"><h3 class="card-title"><i class="fas fa-tasks mr-2"></i>Aksi</h3></div>
+      <div class="card-body">
+        @if($s==='draft'&&$u->id===$pengajuan->user_id)
+          <form action="{{ route('pengajuan.submit',$pengajuan) }}" method="POST" class="d-inline">
+            @csrf<button class="btn btn-success mr-2" onclick="return confirm('Ajukan pengajuan ini?')"><i class="fas fa-paper-plane mr-1"></i>Ajukan ke Admin Divisi</button>
+          </form>
+          <a href="{{ route('pengajuan.edit',$pengajuan) }}" class="btn btn-warning mr-2"><i class="fas fa-edit mr-1"></i>Edit</a>
+        @endif
+        @if($s==='diajukan'&&$u->isAdminDivisi()&&$u->divisi_id===$pengajuan->divisi_id)
+          <form action="{{ route('approval.review',$pengajuan) }}" method="POST" class="d-inline">@csrf
+            <button class="btn btn-info mr-2"><i class="fas fa-eye mr-1"></i>Review</button></form>
+        @endif
+        @if($s==='review_admin'&&$u->isAdminDivisi()&&$u->divisi_id===$pengajuan->divisi_id)
+          <form action="{{ route('approval.teruskan',$pengajuan) }}" method="POST" class="d-inline">@csrf
+            <button class="btn btn-primary mr-2"><i class="fas fa-arrow-right mr-1"></i>Teruskan ke Purchasing</button></form>
+        @endif
+        @if($s==='diteruskan'&&$u->isPurchasing())
+          <form action="{{ route('approval.proses',$pengajuan) }}" method="POST" class="d-inline">@csrf
+            <button class="btn btn-info mr-2"><i class="fas fa-cog mr-1"></i>Proses</button></form>
+        @endif
+        @if($s==='proses_purchasing'&&$u->isPurchasing())
+          <form action="{{ route('approval.ajukan',$pengajuan) }}" method="POST" class="d-inline">@csrf
+            <button class="btn btn-primary mr-2"><i class="fas fa-paper-plane mr-1"></i>Ajukan Approval Akhir</button></form>
+        @endif
+        @if($s==='menunggu_approval'&&($u->isWakilDirektur()||$u->isDirektur()||$u->isSuperadmin()))
+          <a href="{{ route('approval.show',$pengajuan) }}" class="btn btn-success mr-2"><i class="fas fa-check mr-1"></i>Setujui / Tolak</a>
+        @endif
+        @if($s==='disetujui'&&($u->isPurchasing()||$u->isSuperadmin()))
+          <form action="{{ route('approval.selesai',$pengajuan) }}" method="POST" class="d-inline">@csrf
+            <button class="btn btn-dark mr-2"><i class="fas fa-flag-checkered mr-1"></i>Tandai Selesai</button></form>
+        @endif
+        @if(!in_array($s,['draft','disetujui','ditolak','selesai'])&&$u->canApprove())
+          <button class="btn btn-danger" data-toggle="modal" data-target="#modalTolak"><i class="fas fa-times mr-1"></i>Tolak</button>
+        @endif
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card card-outline card-secondary">
+      <div class="card-header"><h3 class="card-title"><i class="fas fa-history mr-2"></i>Timeline Proses</h3></div>
+      <div class="card-body" style="padding:12px">
+        @if($pengajuan->approvalLogs->count())
+        <div class="timeline timeline-inverse">
+          @foreach($pengajuan->approvalLogs as $log)
+          <div>
+            <i class="fas fa-circle {{ $log->aksi_color }}" style="font-size:10px"></i>
+            <div class="timeline-item" style="font-size:12px">
+              <span class="time text-muted"><i class="fas fa-clock mr-1"></i>{{ $log->created_at->format('d/m H:i') }}</span>
+              <h3 class="timeline-header" style="font-size:12px;padding:6px 10px">
+                <strong>{{ $log->user->name }}</strong> — {{ $log->aksi_label }}
+              </h3>
+              @if($log->catatan)
+              <div class="timeline-body" style="padding:6px 10px;background:#F8FAFC;border-radius:6px;margin:4px 10px;font-size:11px;color:#64748B">{{ $log->catatan }}</div>
+              @endif
+              <div class="timeline-footer" style="padding:4px 10px">
+                <span class="badge badge-secondary" style="font-size:10px">{{ $log->status_sesudah }}</span>
+              </div>
+            </div>
+          </div>
+          @endforeach
+          <div><i class="fas fa-clock text-muted" style="font-size:10px"></i></div>
+        </div>
+        @else
+          <p class="text-center text-muted py-3">Belum ada aktivitas</p>
+        @endif
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalTolak">
+  <div class="modal-dialog"><div class="modal-content">
+    <form action="{{ route('approval.tolak',$pengajuan) }}" method="POST">
+      @csrf
+      <div class="modal-header" style="background:linear-gradient(135deg,#EF4444,#DC2626)">
+        <h5 class="modal-title text-white"><i class="fas fa-times mr-2"></i>Tolak Pengajuan</h5>
+        <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Alasan Penolakan <span class="text-danger">*</span></label>
+          <textarea name="alasan" class="form-control" rows="4" placeholder="Tulis alasan penolakan (min 5 karakter)..." required minlength="5"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+        <button type="submit" class="btn btn-danger"><i class="fas fa-times mr-1"></i>Tolak Pengajuan</button>
+      </div>
+    </form>
+  </div></div>
+</div>
+@endsection
