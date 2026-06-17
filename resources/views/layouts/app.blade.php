@@ -13,6 +13,7 @@
 </head>
 <body class="hold-transition sidebar-mini layout-fixed">
 <div class="wrapper">
+
 <nav class="main-header navbar navbar-expand navbar-white navbar-light">
   <ul class="navbar-nav">
     <li class="nav-item"><a class="nav-link" data-widget="pushmenu" href="#"><i class="fas fa-bars"></i></a></li>
@@ -68,7 +69,7 @@
 <aside class="main-sidebar sidebar-dark-primary elevation-0">
   <a href="{{ route('dashboard') }}" class="brand-link">
     <div class="d-flex align-items-center">
-      <div style="width:34px;height:34px;background:var(--primary);border-radius:9px;display:flex;align-items:center;justify-content:center;margin-right:10px;flex-shrink:0">
+      <div style="width:34px;height:34px;background:#4F46E5;border-radius:9px;display:flex;align-items:center;justify-content:center;margin-right:10px;flex-shrink:0">
         <i class="fas fa-boxes text-white" style="font-size:15px"></i>
       </div>
       <div>
@@ -79,90 +80,172 @@
   </a>
   <div class="sidebar">
     <div class="user-panel mt-3 pb-3 mb-3 d-flex">
-      <div class="image"><img src="{{ auth()->user()->foto_url }}" class="img-circle" style="width:34px;height:34px;object-fit:cover;border:2px solid rgba(255,255,255,.1)"></div>
+      <div class="image">
+        <img src="{{ auth()->user()->foto_url }}" class="img-circle" style="width:34px;height:34px;object-fit:cover;border:2px solid rgba(255,255,255,.1)">
+      </div>
       <div class="info">
         <a href="{{ route('profile.edit') }}" class="d-block" style="font-size:13px;font-weight:600">{{ Str::limit(auth()->user()->name,20) }}</a>
-        <small style="font-size:11px;color:#475569">{{ auth()->user()->divisi->nama_divisi??auth()->user()->role->label() }}</small>
+        <small style="font-size:11px;color:#475569">{{ auth()->user()->divisi->nama_divisi ?? auth()->user()->role->label() }}</small>
       </div>
     </div>
+
     <nav class="mt-1">
       <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
-        <li class="nav-item">
-          <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard')?'active':'' }}">
-            <i class="nav-icon fas fa-th-large"></i><p>Dashboard</p>
-          </a>
-        </li>
-        @canRole(['admin_divisi','purchasing','superadmin'])
-        <li class="nav-header">INVENTARIS</li>
-        <li class="nav-item">
-          <a href="{{ route('barang.index') }}" class="nav-link {{ request()->routeIs('barang.*')?'active':'' }}">
-            <i class="nav-icon fas fa-box"></i><p>Data Barang</p>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a href="{{ route('barang-masuk.index') }}" class="nav-link {{ request()->routeIs('barang-masuk.*')?'active':'' }}">
-            <i class="nav-icon fas fa-arrow-circle-down"></i><p>Barang Masuk</p>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a href="{{ route('barang-keluar.index') }}" class="nav-link {{ request()->routeIs('barang-keluar.*')?'active':'' }}">
-            <i class="nav-icon fas fa-arrow-circle-up"></i><p>Barang Keluar</p>
-          </a>
-        </li>
-        @endCanRole
-        <li class="nav-item">
-          <a href="{{ route('stock.index') }}" class="nav-link {{ request()->routeIs('stock.*')?'active':'' }}">
-            <i class="nav-icon fas fa-layer-group"></i><p>Stock Balance</p>
-          </a>
-        </li>
-        <li class="nav-header">PENGAJUAN</li>
-        <li class="nav-item">
-          <a href="{{ route('pengajuan.index') }}" class="nav-link {{ request()->routeIs('pengajuan.*')?'active':'' }}">
-            <i class="nav-icon fas fa-file-alt"></i>
-            <p>Pengajuan
-              @php
-                $u=auth()->user();$pc=0;
-                if($u->isAdminDivisi()) $pc=\App\Models\Pengajuan::where('divisi_id',$u->divisi_id)->where('status','diajukan')->count();
-                elseif($u->isPurchasing()) $pc=\App\Models\Pengajuan::where('status','diteruskan')->count();
-                elseif($u->isWakilDirektur()) $pc=\App\Models\Pengajuan::where('status','menunggu_approval')->where('jalur_approval','wakil_direktur')->count();
-                elseif($u->isDirektur()) $pc=\App\Models\Pengajuan::where('status','menunggu_approval')->where('jalur_approval','direktur')->count();
-              @endphp
-              @if($pc>0)<span class="badge badge-warning right" style="font-size:10px">{{ $pc }}</span>@endif
-            </p>
-          </a>
-        </li>
-        <li class="nav-header">LAPORAN</li>
-        <li class="nav-item">
-          <a href="{{ route('laporan.index') }}" class="nav-link {{ request()->routeIs('laporan.*')?'active':'' }}">
-            <i class="nav-icon fas fa-chart-bar"></i><p>Laporan</p>
-          </a>
-        </li>
-        @canRole(['superadmin'])
-        <li class="nav-header">MASTER DATA</li>
-        <li class="nav-item">
-          <a href="{{ route('divisi.index') }}" class="nav-link {{ request()->routeIs('divisi.*')?'active':'' }}">
-            <i class="nav-icon fas fa-sitemap"></i><p>Kelola Divisi</p>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a href="{{ route('users.index') }}" class="nav-link {{ request()->routeIs('users.*')?'active':'' }}">
-            <i class="nav-icon fas fa-users-cog"></i><p>Kelola Pengguna</p>
-          </a>
-        </li>
-        @endCanRole
-        <li class="nav-header">AKUN</li>
-        <li class="nav-item">
-          <a href="{{ route('profile.edit') }}" class="nav-link {{ request()->routeIs('profile.*')?'active':'' }}">
-            <i class="nav-icon fas fa-user-circle"></i><p>Profil Saya</p>
-          </a>
-        </li>
-        <li class="nav-item">
-          <form method="POST" action="{{ route('logout') }}">@csrf
-            <button type="submit" class="nav-link btn btn-link text-left w-100" style="color:rgba(255,255,255,.6)">
-              <i class="nav-icon fas fa-sign-out-alt" style="color:#EF4444"></i><p>Logout</p>
-            </button>
-          </form>
-        </li>
+
+        {{-- ── SIDEBAR PURCHASING (menu terbatas) ── --}}
+        @if(auth()->user()->isPurchasing())
+
+          {{-- Dashboard --}}
+          <li class="nav-item">
+            <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard')?'active':'' }}">
+              <i class="nav-icon fas fa-th-large"></i><p>Dashboard</p>
+            </a>
+          </li>
+
+          {{-- Inventaris --}}
+          <li class="nav-header">INVENTARIS</li>
+
+          <li class="nav-item">
+            <a href="{{ route('barang.index') }}" class="nav-link {{ request()->routeIs('barang.*')?'active':'' }}">
+              <i class="nav-icon fas fa-box"></i><p>Data Barang</p>
+            </a>
+          </li>
+
+          <li class="nav-item">
+            <a href="{{ route('stock.index') }}" class="nav-link {{ request()->routeIs('stock.*')?'active':'' }}">
+              <i class="nav-icon fas fa-layer-group"></i><p>Stock Balance</p>
+            </a>
+          </li>
+
+          {{-- Pengajuan --}}
+          <li class="nav-header">PENGAJUAN</li>
+          <li class="nav-item">
+            <a href="{{ route('pengajuan.index') }}" class="nav-link {{ request()->routeIs('pengajuan.*')?'active':'' }}">
+              <i class="nav-icon fas fa-file-alt"></i>
+              <p>Pengajuan
+                @php $pc = \App\Models\Pengajuan::where('status','diteruskan')->count(); @endphp
+                @if($pc > 0)<span class="badge badge-warning right" style="font-size:10px">{{ $pc }}</span>@endif
+              </p>
+            </a>
+          </li>
+
+          {{-- Laporan --}}
+          <li class="nav-header">LAPORAN</li>
+          <li class="nav-item">
+            <a href="{{ route('laporan.index') }}" class="nav-link {{ request()->routeIs('laporan.*')?'active':'' }}">
+              <i class="nav-icon fas fa-chart-bar"></i><p>Laporan</p>
+            </a>
+          </li>
+
+          {{-- Akun --}}
+          <li class="nav-header">AKUN</li>
+          <li class="nav-item">
+            <a href="{{ route('profile.edit') }}" class="nav-link {{ request()->routeIs('profile.*')?'active':'' }}">
+              <i class="nav-icon fas fa-user-circle"></i><p>Profil Saya</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <form method="POST" action="{{ route('logout') }}">@csrf
+              <button type="submit" class="nav-link btn btn-link text-left w-100" style="color:rgba(255,255,255,.6)">
+                <i class="nav-icon fas fa-sign-out-alt" style="color:#EF4444"></i><p>Logout</p>
+              </button>
+            </form>
+          </li>
+
+        {{-- ── SIDEBAR ROLE LAINNYA ── --}}
+        @else
+
+          {{-- Dashboard --}}
+          <li class="nav-item">
+            <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard')?'active':'' }}">
+              <i class="nav-icon fas fa-th-large"></i><p>Dashboard</p>
+            </a>
+          </li>
+
+          {{-- Inventaris: admin_divisi & superadmin --}}
+          @canRole(['admin_divisi','superadmin'])
+          <li class="nav-header">INVENTARIS</li>
+          <li class="nav-item">
+            <a href="{{ route('barang.index') }}" class="nav-link {{ request()->routeIs('barang.*')?'active':'' }}">
+              <i class="nav-icon fas fa-box"></i><p>Data Barang</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="{{ route('barang-masuk.index') }}" class="nav-link {{ request()->routeIs('barang-masuk.*')?'active':'' }}">
+              <i class="nav-icon fas fa-arrow-circle-down"></i><p>Barang Masuk</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="{{ route('barang-keluar.index') }}" class="nav-link {{ request()->routeIs('barang-keluar.*')?'active':'' }}">
+              <i class="nav-icon fas fa-arrow-circle-up"></i><p>Barang Keluar</p>
+            </a>
+          </li>
+          @endCanRole
+
+          {{-- Stock: semua role --}}
+          <li class="nav-item">
+            <a href="{{ route('stock.index') }}" class="nav-link {{ request()->routeIs('stock.*')?'active':'' }}">
+              <i class="nav-icon fas fa-layer-group"></i><p>Stock Balance</p>
+            </a>
+          </li>
+
+          {{-- Pengajuan --}}
+          <li class="nav-header">PENGAJUAN</li>
+          <li class="nav-item">
+            <a href="{{ route('pengajuan.index') }}" class="nav-link {{ request()->routeIs('pengajuan.*')?'active':'' }}">
+              <i class="nav-icon fas fa-file-alt"></i>
+              <p>Pengajuan
+                @php
+                  $u  = auth()->user(); $pc = 0;
+                  if ($u->isAdminDivisi())       $pc = \App\Models\Pengajuan::where('divisi_id',$u->divisi_id)->where('status','diajukan')->count();
+                  elseif ($u->isWakilDirektur()) $pc = \App\Models\Pengajuan::where('status','menunggu_approval')->where('jalur_approval','wakil_direktur')->count();
+                  elseif ($u->isDirektur())      $pc = \App\Models\Pengajuan::where('status','menunggu_approval')->where('jalur_approval','direktur')->count();
+                @endphp
+                @if($pc > 0)<span class="badge badge-warning right" style="font-size:10px">{{ $pc }}</span>@endif
+              </p>
+            </a>
+          </li>
+
+          {{-- Laporan --}}
+          <li class="nav-header">LAPORAN</li>
+          <li class="nav-item">
+            <a href="{{ route('laporan.index') }}" class="nav-link {{ request()->routeIs('laporan.*')?'active':'' }}">
+              <i class="nav-icon fas fa-chart-bar"></i><p>Laporan</p>
+            </a>
+          </li>
+
+          {{-- Master Data: superadmin --}}
+          @canRole(['superadmin'])
+          <li class="nav-header">MASTER DATA</li>
+          <li class="nav-item">
+            <a href="{{ route('divisi.index') }}" class="nav-link {{ request()->routeIs('divisi.*')?'active':'' }}">
+              <i class="nav-icon fas fa-sitemap"></i><p>Kelola Divisi</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="{{ route('users.index') }}" class="nav-link {{ request()->routeIs('users.*')?'active':'' }}">
+              <i class="nav-icon fas fa-users-cog"></i><p>Kelola Pengguna</p>
+            </a>
+          </li>
+          @endCanRole
+
+          {{-- Akun --}}
+          <li class="nav-header">AKUN</li>
+          <li class="nav-item">
+            <a href="{{ route('profile.edit') }}" class="nav-link {{ request()->routeIs('profile.*')?'active':'' }}">
+              <i class="nav-icon fas fa-user-circle"></i><p>Profil Saya</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <form method="POST" action="{{ route('logout') }}">@csrf
+              <button type="submit" class="nav-link btn btn-link text-left w-100" style="color:rgba(255,255,255,.6)">
+                <i class="nav-icon fas fa-sign-out-alt" style="color:#EF4444"></i><p>Logout</p>
+              </button>
+            </form>
+          </li>
+
+        @endif
+
       </ul>
     </nav>
   </div>
@@ -209,10 +292,12 @@
     </div>
   </div>
 </div>
+
 <footer class="main-footer text-center">
   <strong>SIM Barang Support</strong> &copy; {{ date('Y') }}
 </footer>
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
@@ -222,7 +307,11 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 $.ajaxSetup({headers:{'X-CSRF-TOKEN':$('meta[name="csrf-token"]').attr('content')}});
-$(function(){$('[data-toggle="tooltip"]').tooltip();$('.select2').select2({theme:'bootstrap4',width:'100%'});setTimeout(()=>$('.alert.fade.show').alert('close'),5000);});
+$(function(){
+  $('[data-toggle="tooltip"]').tooltip();
+  $('.select2').select2({theme:'bootstrap4',width:'100%'});
+  setTimeout(()=>$('.alert.fade.show').alert('close'),5000);
+});
 </script>
 @stack('scripts')
 </body>

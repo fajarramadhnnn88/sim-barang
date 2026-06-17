@@ -21,10 +21,15 @@ return new class extends Migration {
             $table->timestamps();
             $table->softDeletes();
         });
+
         Schema::create('detail_pengajuans', function (Blueprint $table) {
             $table->id();
             $table->foreignId('pengajuan_id')->constrained('pengajuans')->cascadeOnDelete();
-            $table->foreignId('barang_id')->constrained('barangs')->restrictOnDelete();
+            // nullable — jika null berarti barang diketik manual oleh staff
+            $table->foreignId('barang_id')->nullable()->constrained('barangs')->nullOnDelete();
+            $table->string('nama_barang_custom')->nullable();   // nama barang bebas
+            $table->string('spesifikasi_custom')->nullable();   // spesifikasi tambahan
+            $table->boolean('is_custom')->default(false);       // true = barang diketik manual
             $table->integer('jumlah_diminta');
             $table->integer('jumlah_disetujui')->nullable();
             $table->decimal('harga_estimasi', 15, 2)->default(0);
@@ -33,6 +38,7 @@ return new class extends Migration {
             $table->timestamps();
         });
     }
+
     public function down(): void {
         Schema::dropIfExists('detail_pengajuans');
         Schema::dropIfExists('pengajuans');
