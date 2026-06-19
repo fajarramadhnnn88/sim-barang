@@ -12,8 +12,8 @@
     <form method="GET" class="mb-3">
       <div class="row">
         <div class="col-md-3"><input type="text" name="search" class="form-control form-control-sm" placeholder="Cari no. transaksi / barang..." value="{{ request('search') }}"></div>
-        <div class="col-md-3"><input type="date" name="dari" class="form-control form-control-sm" value="{{ request('dari') }}" placeholder="Dari"></div>
-        <div class="col-md-3"><input type="date" name="sampai" class="form-control form-control-sm" value="{{ request('sampai') }}" placeholder="Sampai"></div>
+        <div class="col-md-3"><input type="date" name="dari" class="form-control form-control-sm" value="{{ request('dari') }}"></div>
+        <div class="col-md-3"><input type="date" name="sampai" class="form-control form-control-sm" value="{{ request('sampai') }}"></div>
         <div class="col-md-3">
           <button class="btn btn-info btn-sm mr-1"><i class="fas fa-search"></i></button>
           <a href="{{ route('barang-masuk.index') }}" class="btn btn-secondary btn-sm">Reset</a>
@@ -23,7 +23,11 @@
     <div class="table-responsive">
       <table class="table table-hover table-bordered">
         <thead class="thead-light">
-          <tr><th>No. Transaksi</th><th>Tgl Masuk</th><th>Barang</th><th>Supplier</th><th class="text-center">Jumlah</th><th>Harga Satuan</th><th>Total</th><th>Aksi</th></tr>
+          <tr>
+            <th>No. Transaksi</th><th>Tgl Masuk</th><th>Barang</th><th>Supplier</th>
+            <th class="text-center">Jumlah</th><th>PIC</th><th class="text-center">Foto</th>
+            <th>Pengajuan</th><th>Total</th><th>Aksi</th>
+          </tr>
         </thead>
         <tbody>
           @forelse($items as $m)
@@ -31,9 +35,21 @@
             <td><code style="font-size:11px;background:#F1F5F9;padding:2px 6px;border-radius:4px">{{ $m->no_transaksi }}</code></td>
             <td>{{ $m->tanggal_masuk->format('d/m/Y') }}</td>
             <td><strong style="font-size:13px">{{ $m->barang->nama_barang }}</strong><br><small class="text-muted">{{ $m->barang->kode_barang }}</small></td>
-            <td>{{ $m->supplier?->nama_supplier??'-' }}</td>
+            <td>{{ $m->supplier?->nama_supplier ?? '-' }}</td>
             <td class="text-center"><span class="badge badge-success">{{ $m->jumlah }} {{ $m->barang->satuan }}</span></td>
-            <td>Rp {{ number_format($m->harga_satuan,0,',','.') }}</td>
+            <td style="font-size:12px">{{ $m->pic_name ?? '-' }}</td>
+            <td class="text-center">
+              @if($m->foto_dokumentasi_url)
+                <a href="{{ $m->foto_dokumentasi_url }}" target="_blank">
+                  <img src="{{ $m->foto_dokumentasi_url }}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;border:1px solid #E2E8F0">
+                </a>
+              @else <span class="text-muted">-</span> @endif
+            </td>
+            <td style="font-size:11px">
+              @if($m->pengajuan)
+                <a href="{{ route('pengajuan.show',$m->pengajuan) }}">{{ $m->pengajuan->no_pengajuan }}</a>
+              @else <span class="text-muted">-</span> @endif
+            </td>
             <td style="font-weight:600;color:#059669">{{ $m->total_harga_format }}</td>
             <td>
               <a href="{{ route('barang-masuk.show',$m) }}" class="btn btn-xs btn-info"><i class="fas fa-eye"></i></a>
@@ -44,7 +60,7 @@
               </form>
             </td>
           </tr>
-          @empty<tr><td colspan="8" class="text-center text-muted py-4">Tidak ada data</td></tr>@endforelse
+          @empty<tr><td colspan="10" class="text-center text-muted py-4">Tidak ada data</td></tr>@endforelse
         </tbody>
       </table>
     </div>

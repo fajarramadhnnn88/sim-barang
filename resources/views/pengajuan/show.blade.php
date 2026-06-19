@@ -50,6 +50,40 @@
       </div>
     </div>
 
+    {{-- Banner status proses pembelian --}}
+    @if($pengajuan->status->value === 'proses_pembelian')
+      <div class="callout callout-info">
+        <h5><i class="fas fa-shopping-cart mr-2"></i>Sedang Dalam Proses Pembelian</h5>
+        <p class="mb-0" style="font-size:13px">
+          Purchasing sedang melakukan pembelian barang untuk pengajuan ini.
+          @if(auth()->user()->isAdminDivisi() || auth()->user()->isSuperadmin())
+            Anda akan menerima notifikasi setelah barang dicatat masuk oleh Purchasing.
+          @endif
+        </p>
+      </div>
+    @endif
+
+    {{-- Banner status barang masuk - perlu konfirmasi --}}
+    @if($pengajuan->status->value === 'barang_masuk')
+      <div class="callout callout-warning">
+        <h5><i class="fas fa-box-open mr-2"></i>Barang Sudah Masuk — Mohon Dikonfirmasi</h5>
+        <p class="mb-0" style="font-size:13px">
+          Purchasing telah mencatat barang masuk. Silakan cek kesesuaian barang di bawah,
+          lalu konfirmasi penerimaan jika sudah sesuai.
+        </p>
+      </div>
+    @endif
+
+    {{-- Banner selesai/diterima --}}
+    @if($pengajuan->status->value === 'diterima')
+      <div class="callout callout-success">
+        <h5><i class="fas fa-check-double mr-2"></i>Barang Telah Diterima</h5>
+        <p class="mb-0" style="font-size:13px">
+          Admin divisi telah mengkonfirmasi penerimaan barang. Pengajuan ini selesai.
+        </p>
+      </div>
+    @endif
+
     {{-- Detail Barang --}}
     <div class="card card-outline card-secondary">
       <div class="card-header">
@@ -107,7 +141,6 @@
                     <i class="fas fa-plus mr-1"></i>Tambah ke Sistem
                   </button>
 
-                  {{-- Modal Tambah Barang --}}
                   <div class="modal fade" id="modalTambahBarang{{ $d->id }}">
                     <div class="modal-dialog">
                       <div class="modal-content">
@@ -126,36 +159,26 @@
                             </div>
                             <div class="form-group">
                               <label>Kode Barang <span class="text-danger">*</span></label>
-                              <input type="text" name="kode_barang" class="form-control"
-                                placeholder="Contoh: BRG00011" required>
-                            </div>
-                            <div class="form-group">
-                              <label>Nama Barang</label>
-                              <input type="text" class="form-control" value="{{ $d->nama_barang_custom }}" disabled>
-                              <small class="text-muted">Nama diambil dari pengajuan staff</small>
+                              <input type="text" name="kode_barang" class="form-control" placeholder="Contoh: BRG00011" required>
                             </div>
                             <div class="form-group">
                               <label>Kategori <span class="text-danger">*</span></label>
                               <select name="kategori_id" class="form-control" required>
                                 <option value="">-- Pilih Kategori --</option>
-                                @foreach($kategoris as $k)
-                                  <option value="{{ $k->id }}">{{ $k->nama_kategori }}</option>
-                                @endforeach
+                                @foreach($kategoris as $k)<option value="{{ $k->id }}">{{ $k->nama_kategori }}</option>@endforeach
                               </select>
                             </div>
                             <div class="row">
                               <div class="col-6">
                                 <div class="form-group">
                                   <label>Satuan <span class="text-danger">*</span></label>
-                                  <input type="text" name="satuan" class="form-control"
-                                    placeholder="Pcs / Unit / Box" required>
+                                  <input type="text" name="satuan" class="form-control" placeholder="Pcs / Unit" required>
                                 </div>
                               </div>
                               <div class="col-6">
                                 <div class="form-group">
                                   <label>Harga Satuan (Rp)</label>
-                                  <input type="number" name="harga_satuan" class="form-control"
-                                    min="0" value="0">
+                                  <input type="number" name="harga_satuan" class="form-control" min="0" value="0">
                                 </div>
                               </div>
                             </div>
@@ -163,7 +186,7 @@
                           <div class="modal-footer">
                             <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Batal</button>
                             <button type="submit" class="btn btn-success btn-sm">
-                              <i class="fas fa-save mr-1"></i>Simpan & Hubungkan ke Pengajuan
+                              <i class="fas fa-save mr-1"></i>Simpan & Hubungkan
                             </button>
                           </div>
                         </form>
@@ -193,6 +216,38 @@
         </table>
       </div>
     </div>
+
+    {{-- Riwayat Barang Masuk terkait (kalau ada) --}}
+    @if($pengajuan->barangMasuks->count() ?? false)
+    <div class="card card-outline card-info">
+      <div class="card-header"><h3 class="card-title"><i class="fas fa-truck-loading mr-2"></i>Barang Masuk Terkait</h3></div>
+      <div class="card-body p-0">
+        <table class="table table-sm table-bordered mb-0">
+          <thead class="thead-light">
+            <tr><th>No. Transaksi</th><th>Barang</th><th>Jumlah</th><th>PIC</th><th>Foto</th><th>Tanggal</th></tr>
+          </thead>
+          <tbody>
+            @foreach($pengajuan->barangMasuks as $bm)
+            <tr>
+              <td><code style="font-size:11px">{{ $bm->no_transaksi }}</code></td>
+              <td>{{ $bm->barang->nama_barang }}</td>
+              <td>{{ $bm->jumlah }} {{ $bm->barang->satuan }}</td>
+              <td>{{ $bm->pic_name ?? '-' }}</td>
+              <td>
+                @if($bm->foto_dokumentasi_url)
+                  <a href="{{ $bm->foto_dokumentasi_url }}" target="_blank">
+                    <img src="{{ $bm->foto_dokumentasi_url }}" style="width:40px;height:40px;object-fit:cover;border-radius:6px">
+                  </a>
+                @else <span class="text-muted">-</span> @endif
+              </td>
+              <td>{{ $bm->tanggal_masuk->format('d/m/Y') }}</td>
+            </tr>
+            @endforeach
+          </tbody>
+        </table>
+      </div>
+    </div>
+    @endif
 
     {{-- Aksi --}}
     @php $u = auth()->user(); $s = $pengajuan->status->value; @endphp
@@ -237,17 +292,35 @@
 
         @if($s==='menunggu_approval' && ($u->isWakilDirektur()||$u->isDirektur()||$u->isSuperadmin()))
           <a href="{{ route('approval.show',$pengajuan) }}" class="btn btn-success mr-2">
-            <i class="fas fa-check mr-1"></i>Setujui
+            <i class="fas fa-check mr-1"></i>Setujui / Tolak
           </a>
         @endif
 
-        @if($s==='disetujui' && ($u->isPurchasing()||$u->isAdminDivisi()||$u->isSuperadmin()))
-          <form action="{{ route('approval.selesai',$pengajuan) }}" method="POST" class="d-inline">
-            @csrf<button class="btn btn-dark mr-2"><i class="fas fa-flag-checkered mr-1"></i>Tandai Selesai</button>
+        {{-- Purchasing: mulai proses pembelian setelah disetujui --}}
+        @if($s==='disetujui' && ($u->isPurchasing()||$u->isSuperadmin()))
+          <form action="{{ route('approval.mulai-pembelian',$pengajuan) }}" method="POST" class="d-inline">
+            @csrf
+            <button class="btn btn-primary mr-2" onclick="return confirm('Mulai proses pembelian untuk pengajuan ini? Admin divisi akan dinotifikasi.')">
+              <i class="fas fa-shopping-cart mr-1"></i>Proses Pembelian
+            </button>
           </form>
         @endif
 
-        @if(!in_array($s,['draft','disetujui','ditolak','selesai']) && $u->canApprove())
+        {{-- Purchasing: input barang masuk saat status proses_pembelian --}}
+        @if($s==='proses_pembelian' && ($u->isPurchasing()||$u->isSuperadmin()))
+          <a href="{{ route('barang-masuk.create', ['pengajuan_id' => $pengajuan->id]) }}" class="btn btn-info mr-2">
+            <i class="fas fa-truck-loading mr-1"></i>Input Barang Masuk
+          </a>
+        @endif
+
+        {{-- Admin divisi: konfirmasi terima saat status barang_masuk --}}
+        @if($s==='barang_masuk' && ($u->isAdminDivisi()||$u->isSuperadmin()) && $u->divisi_id===$pengajuan->divisi_id)
+          <button class="btn btn-success mr-2" data-toggle="modal" data-target="#modalKonfirmasiTerima">
+            <i class="fas fa-check-double mr-1"></i>Konfirmasi Terima Barang
+          </button>
+        @endif
+
+        @if(!in_array($s,['draft','diterima','ditolak','selesai']) && $u->canApprove())
           <button class="btn btn-danger" data-toggle="modal" data-target="#modalTolak">
             <i class="fas fa-times mr-1"></i>Tolak
           </button>
@@ -288,6 +361,38 @@
           <p class="text-center text-muted py-3">Belum ada aktivitas</p>
         @endif
       </div>
+    </div>
+  </div>
+</div>
+
+{{-- Modal Konfirmasi Terima --}}
+<div class="modal fade" id="modalKonfirmasiTerima">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form action="{{ route('approval.konfirmasi-terima',$pengajuan) }}" method="POST">
+        @csrf
+        <div class="modal-header" style="background:linear-gradient(135deg,#10B981,#059669)">
+          <h5 class="modal-title text-white" style="font-size:14px">
+            <i class="fas fa-check-double mr-2"></i>Konfirmasi Penerimaan Barang
+          </h5>
+          <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+        </div>
+        <div class="modal-body">
+          <div class="callout callout-info py-2" style="font-size:12px">
+            Pastikan barang yang diterima sudah sesuai dengan detail pengajuan sebelum mengkonfirmasi.
+          </div>
+          <div class="form-group mb-0">
+            <label>Catatan (opsional)</label>
+            <textarea name="catatan" class="form-control" rows="3" placeholder="Contoh: Barang sesuai, kondisi baik..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-success">
+            <i class="fas fa-check mr-1"></i>Konfirmasi Diterima
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 </div>

@@ -38,7 +38,7 @@
         @forelse(auth()->user()->unreadNotifications->take(5) as $notif)
           <a class="dropdown-item py-2" href="{{ $notif->data['url']??'#' }}" style="white-space:normal;border-bottom:1px solid #F8FAFC">
             <div style="font-weight:600;font-size:12px;color:#1E293B">{{ $notif->data['judul']??'Notif' }}</div>
-            <div style="font-size:11px;color:#64748B;margin-top:2px;line-height:1.4">{{ Str::limit($notif->data['pesan']??'',60) }}</div>
+            <div style="font-size:11px;color:#64748B;margin-top:2px;line-height:1.4">{{ Str::limit($notif->data['pesan']??'',70) }}</div>
             <div style="font-size:10px;color:#94A3B8;margin-top:2px">{{ $notif->created_at->diffForHumans() }}</div>
           </a>
         @empty
@@ -92,78 +92,34 @@
     <nav class="mt-1">
       <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
 
-        {{-- ── SIDEBAR PURCHASING (menu terbatas) ── --}}
+        {{-- Dashboard --}}
+        <li class="nav-item">
+          <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard')?'active':'' }}">
+            <i class="nav-icon fas fa-th-large"></i><p>Dashboard</p>
+          </a>
+        </li>
+
+        {{-- ── INVENTARIS ── --}}
         @if(auth()->user()->isPurchasing())
-
-          {{-- Dashboard --}}
-          <li class="nav-item">
-            <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard')?'active':'' }}">
-              <i class="nav-icon fas fa-th-large"></i><p>Dashboard</p>
-            </a>
-          </li>
-
-          {{-- Inventaris --}}
+          {{-- Purchasing: Data Barang read-only, Barang Masuk full akses (tugas inti mereka) --}}
           <li class="nav-header">INVENTARIS</li>
-
           <li class="nav-item">
             <a href="{{ route('barang.index') }}" class="nav-link {{ request()->routeIs('barang.*')?'active':'' }}">
-              <i class="nav-icon fas fa-box"></i><p>Data Barang</p>
-            </a>
-          </li>
-
-          <li class="nav-item">
-            <a href="{{ route('stock.index') }}" class="nav-link {{ request()->routeIs('stock.*')?'active':'' }}">
-              <i class="nav-icon fas fa-layer-group"></i><p>Stock Balance</p>
-            </a>
-          </li>
-
-          {{-- Pengajuan --}}
-          <li class="nav-header">PENGAJUAN</li>
-          <li class="nav-item">
-            <a href="{{ route('pengajuan.index') }}" class="nav-link {{ request()->routeIs('pengajuan.*')?'active':'' }}">
-              <i class="nav-icon fas fa-file-alt"></i>
-              <p>Pengajuan
-                @php $pc = \App\Models\Pengajuan::where('status','diteruskan')->count(); @endphp
-                @if($pc > 0)<span class="badge badge-warning right" style="font-size:10px">{{ $pc }}</span>@endif
-              </p>
-            </a>
-          </li>
-
-          {{-- Laporan --}}
-          <li class="nav-header">LAPORAN</li>
-          <li class="nav-item">
-            <a href="{{ route('laporan.index') }}" class="nav-link {{ request()->routeIs('laporan.*')?'active':'' }}">
-              <i class="nav-icon fas fa-chart-bar"></i><p>Laporan</p>
-            </a>
-          </li>
-
-          {{-- Akun --}}
-          <li class="nav-header">AKUN</li>
-          <li class="nav-item">
-            <a href="{{ route('profile.edit') }}" class="nav-link {{ request()->routeIs('profile.*')?'active':'' }}">
-              <i class="nav-icon fas fa-user-circle"></i><p>Profil Saya</p>
+              <i class="nav-icon fas fa-box"></i><p>Data Barang <small class="text-muted">(lihat)</small></p>
             </a>
           </li>
           <li class="nav-item">
-            <form method="POST" action="{{ route('logout') }}">@csrf
-              <button type="submit" class="nav-link btn btn-link text-left w-100" style="color:rgba(255,255,255,.6)">
-                <i class="nav-icon fas fa-sign-out-alt" style="color:#EF4444"></i><p>Logout</p>
-              </button>
-            </form>
-          </li>
-
-        {{-- ── SIDEBAR ROLE LAINNYA ── --}}
-        @else
-
-          {{-- Dashboard --}}
-          <li class="nav-item">
-            <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard')?'active':'' }}">
-              <i class="nav-icon fas fa-th-large"></i><p>Dashboard</p>
+            <a href="{{ route('barang-masuk.index') }}" class="nav-link {{ request()->routeIs('barang-masuk.*')?'active':'' }}">
+              <i class="nav-icon fas fa-truck-loading"></i><p>Barang Masuk</p>
             </a>
           </li>
-
-          {{-- Inventaris: admin_divisi & superadmin --}}
-          @canRole(['admin_divisi','superadmin'])
+          <li class="nav-item">
+            <a href="{{ route('barang-keluar.index') }}" class="nav-link {{ request()->routeIs('barang-keluar.*')?'active':'' }}">
+              <i class="nav-icon fas fa-arrow-circle-up"></i><p>Barang Keluar <small class="text-muted">(lihat)</small></p>
+            </a>
+          </li>
+        @elseif(auth()->user()->isAdminDivisi() || auth()->user()->isSuperadmin())
+          {{-- Admin Divisi & Superadmin: akses penuh --}}
           <li class="nav-header">INVENTARIS</li>
           <li class="nav-item">
             <a href="{{ route('barang.index') }}" class="nav-link {{ request()->routeIs('barang.*')?'active':'' }}">
@@ -172,7 +128,7 @@
           </li>
           <li class="nav-item">
             <a href="{{ route('barang-masuk.index') }}" class="nav-link {{ request()->routeIs('barang-masuk.*')?'active':'' }}">
-              <i class="nav-icon fas fa-arrow-circle-down"></i><p>Barang Masuk</p>
+              <i class="nav-icon fas fa-truck-loading"></i><p>Barang Masuk</p>
             </a>
           </li>
           <li class="nav-item">
@@ -180,71 +136,77 @@
               <i class="nav-icon fas fa-arrow-circle-up"></i><p>Barang Keluar</p>
             </a>
           </li>
-          @endCanRole
-
-          {{-- Stock: semua role --}}
-          <li class="nav-item">
-            <a href="{{ route('stock.index') }}" class="nav-link {{ request()->routeIs('stock.*')?'active':'' }}">
-              <i class="nav-icon fas fa-layer-group"></i><p>Stock Balance</p>
-            </a>
-          </li>
-
-          {{-- Pengajuan --}}
-          <li class="nav-header">PENGAJUAN</li>
-          <li class="nav-item">
-            <a href="{{ route('pengajuan.index') }}" class="nav-link {{ request()->routeIs('pengajuan.*')?'active':'' }}">
-              <i class="nav-icon fas fa-file-alt"></i>
-              <p>Pengajuan
-                @php
-                  $u  = auth()->user(); $pc = 0;
-                  if ($u->isAdminDivisi())       $pc = \App\Models\Pengajuan::where('divisi_id',$u->divisi_id)->where('status','diajukan')->count();
-                  elseif ($u->isWakilDirektur()) $pc = \App\Models\Pengajuan::where('status','menunggu_approval')->where('jalur_approval','wakil_direktur')->count();
-                  elseif ($u->isDirektur())      $pc = \App\Models\Pengajuan::where('status','menunggu_approval')->where('jalur_approval','direktur')->count();
-                @endphp
-                @if($pc > 0)<span class="badge badge-warning right" style="font-size:10px">{{ $pc }}</span>@endif
-              </p>
-            </a>
-          </li>
-
-          {{-- Laporan --}}
-          <li class="nav-header">LAPORAN</li>
-          <li class="nav-item">
-            <a href="{{ route('laporan.index') }}" class="nav-link {{ request()->routeIs('laporan.*')?'active':'' }}">
-              <i class="nav-icon fas fa-chart-bar"></i><p>Laporan</p>
-            </a>
-          </li>
-
-          {{-- Master Data: superadmin --}}
-          @canRole(['superadmin'])
-          <li class="nav-header">MASTER DATA</li>
-          <li class="nav-item">
-            <a href="{{ route('divisi.index') }}" class="nav-link {{ request()->routeIs('divisi.*')?'active':'' }}">
-              <i class="nav-icon fas fa-sitemap"></i><p>Kelola Divisi</p>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a href="{{ route('users.index') }}" class="nav-link {{ request()->routeIs('users.*')?'active':'' }}">
-              <i class="nav-icon fas fa-users-cog"></i><p>Kelola Pengguna</p>
-            </a>
-          </li>
-          @endCanRole
-
-          {{-- Akun --}}
-          <li class="nav-header">AKUN</li>
-          <li class="nav-item">
-            <a href="{{ route('profile.edit') }}" class="nav-link {{ request()->routeIs('profile.*')?'active':'' }}">
-              <i class="nav-icon fas fa-user-circle"></i><p>Profil Saya</p>
-            </a>
-          </li>
-          <li class="nav-item">
-            <form method="POST" action="{{ route('logout') }}">@csrf
-              <button type="submit" class="nav-link btn btn-link text-left w-100" style="color:rgba(255,255,255,.6)">
-                <i class="nav-icon fas fa-sign-out-alt" style="color:#EF4444"></i><p>Logout</p>
-              </button>
-            </form>
-          </li>
-
         @endif
+
+        {{-- Stock — semua role --}}
+        <li class="nav-item">
+          <a href="{{ route('stock.index') }}" class="nav-link {{ request()->routeIs('stock.*')?'active':'' }}">
+            <i class="nav-icon fas fa-layer-group"></i><p>Stock Balance</p>
+          </a>
+        </li>
+
+        {{-- Pengajuan --}}
+        <li class="nav-header">PENGAJUAN</li>
+        <li class="nav-item">
+          <a href="{{ route('pengajuan.index') }}" class="nav-link {{ request()->routeIs('pengajuan.*')?'active':'' }}">
+            <i class="nav-icon fas fa-file-alt"></i>
+            <p>Pengajuan
+              @php
+                $u = auth()->user(); $pc = 0;
+                if ($u->isAdminDivisi()) {
+                  // Hitung yg perlu aksi admin: diajukan, review_admin, atau barang_masuk (perlu konfirmasi)
+                  $pc = \App\Models\Pengajuan::where('divisi_id',$u->divisi_id)
+                        ->whereIn('status',['diajukan','review_admin','barang_masuk'])->count();
+                } elseif ($u->isPurchasing()) {
+                  $pc = \App\Models\Pengajuan::whereIn('status',['diteruskan','disetujui'])->count();
+                } elseif ($u->isWakilDirektur()) {
+                  $pc = \App\Models\Pengajuan::where('status','menunggu_approval')->where('jalur_approval','wakil_direktur')->count();
+                } elseif ($u->isDirektur()) {
+                  $pc = \App\Models\Pengajuan::where('status','menunggu_approval')->where('jalur_approval','direktur')->count();
+                }
+              @endphp
+              @if($pc > 0)<span class="badge badge-warning right" style="font-size:10px">{{ $pc }}</span>@endif
+            </p>
+          </a>
+        </li>
+
+        {{-- Laporan --}}
+        <li class="nav-header">LAPORAN</li>
+        <li class="nav-item">
+          <a href="{{ route('laporan.index') }}" class="nav-link {{ request()->routeIs('laporan.*')?'active':'' }}">
+            <i class="nav-icon fas fa-chart-bar"></i><p>Laporan</p>
+          </a>
+        </li>
+
+        {{-- Master Data — superadmin --}}
+        @canRole(['superadmin'])
+        <li class="nav-header">MASTER DATA</li>
+        <li class="nav-item">
+          <a href="{{ route('divisi.index') }}" class="nav-link {{ request()->routeIs('divisi.*')?'active':'' }}">
+            <i class="nav-icon fas fa-sitemap"></i><p>Kelola Divisi</p>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{{ route('users.index') }}" class="nav-link {{ request()->routeIs('users.*')?'active':'' }}">
+            <i class="nav-icon fas fa-users-cog"></i><p>Kelola Pengguna</p>
+          </a>
+        </li>
+        @endCanRole
+
+        {{-- Akun --}}
+        <li class="nav-header">AKUN</li>
+        <li class="nav-item">
+          <a href="{{ route('profile.edit') }}" class="nav-link {{ request()->routeIs('profile.*')?'active':'' }}">
+            <i class="nav-icon fas fa-user-circle"></i><p>Profil Saya</p>
+          </a>
+        </li>
+        <li class="nav-item">
+          <form method="POST" action="{{ route('logout') }}">@csrf
+            <button type="submit" class="nav-link btn btn-link text-left w-100" style="color:rgba(255,255,255,.6)">
+              <i class="nav-icon fas fa-sign-out-alt" style="color:#EF4444"></i><p>Logout</p>
+            </button>
+          </form>
+        </li>
 
       </ul>
     </nav>
@@ -255,9 +217,7 @@
   <div class="content-header">
     <div class="container-fluid">
       <div class="row align-items-center">
-        <div class="col-sm-6">
-          <h1 class="m-0">@yield('page-title','Dashboard')</h1>
-        </div>
+        <div class="col-sm-6"><h1 class="m-0">@yield('page-title','Dashboard')</h1></div>
         <div class="col-sm-6">
           <ol class="breadcrumb float-sm-right mb-0">
             <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
