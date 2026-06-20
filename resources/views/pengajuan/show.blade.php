@@ -50,7 +50,18 @@
       </div>
     </div>
 
-    {{-- Banner status proses pembelian --}}
+    {{-- Banner status final --}}
+    @php
+      $statusFinal = in_array($pengajuan->status->value, ['disetujui','proses_pembelian','barang_masuk','diterima']);
+    @endphp
+    @if($statusFinal)
+      <div class="callout callout-success py-2">
+        <i class="fas fa-lock mr-2"></i>
+        <strong>Pengajuan ini sudah disetujui</strong> — status final, tidak dapat ditolak kembali.
+        Proses dilanjutkan ke tahap pembelian dan penerimaan barang.
+      </div>
+    @endif
+
     @if($pengajuan->status->value === 'proses_pembelian')
       <div class="callout callout-info">
         <h5><i class="fas fa-shopping-cart mr-2"></i>Sedang Dalam Proses Pembelian</h5>
@@ -63,7 +74,6 @@
       </div>
     @endif
 
-    {{-- Banner status barang masuk - perlu konfirmasi --}}
     @if($pengajuan->status->value === 'barang_masuk')
       <div class="callout callout-warning">
         <h5><i class="fas fa-box-open mr-2"></i>Barang Sudah Masuk — Mohon Dikonfirmasi</h5>
@@ -74,7 +84,6 @@
       </div>
     @endif
 
-    {{-- Banner selesai/diterima --}}
     @if($pengajuan->status->value === 'diterima')
       <div class="callout callout-success">
         <h5><i class="fas fa-check-double mr-2"></i>Barang Telah Diterima</h5>
@@ -217,7 +226,7 @@
       </div>
     </div>
 
-    {{-- Riwayat Barang Masuk terkait (kalau ada) --}}
+    {{-- Riwayat Barang Masuk terkait --}}
     @if($pengajuan->barangMasuks->count() ?? false)
     <div class="card card-outline card-info">
       <div class="card-header"><h3 class="card-title"><i class="fas fa-truck-loading mr-2"></i>Barang Masuk Terkait</h3></div>
@@ -250,7 +259,11 @@
     @endif
 
     {{-- Aksi --}}
-    @php $u = auth()->user(); $s = $pengajuan->status->value; @endphp
+    @php
+      $u = auth()->user(); $s = $pengajuan->status->value;
+      // Tolak hanya boleh SEBELUM disetujui — status final tidak bisa ditolak lagi
+      $statusBolehTolak = ['diajukan','review_admin','diteruskan','proses_purchasing','menunggu_approval'];
+    @endphp
     <div class="card card-outline card-warning">
       <div class="card-header"><h3 class="card-title"><i class="fas fa-tasks mr-2"></i>Aksi</h3></div>
       <div class="card-body">
@@ -296,33 +309,35 @@
           </a>
         @endif
 
-        {{-- Purchasing: mulai proses pembelian setelah disetujui --}}
         @if($s==='disetujui' && ($u->isPurchasing()||$u->isSuperadmin()))
           <form action="{{ route('approval.mulai-pembelian',$pengajuan) }}" method="POST" class="d-inline">
             @csrf
-            <button class="btn btn-primary mr-2" onclick="return confirm('Mulai proses pembelian untuk pengajuan ini? Admin divisi akan dinotifikasi.')">
+            <button class="btn btn-primary mr-2" onclick="return confirm('Mulai proses pembelian? Admin divisi akan dinotifikasi.')">
               <i class="fas fa-shopping-cart mr-1"></i>Proses Pembelian
             </button>
           </form>
         @endif
 
-        {{-- Purchasing: input barang masuk saat status proses_pembelian --}}
         @if($s==='proses_pembelian' && ($u->isPurchasing()||$u->isSuperadmin()))
           <a href="{{ route('barang-masuk.create', ['pengajuan_id' => $pengajuan->id]) }}" class="btn btn-info mr-2">
             <i class="fas fa-truck-loading mr-1"></i>Input Barang Masuk
           </a>
         @endif
 
-        {{-- Admin divisi: konfirmasi terima saat status barang_masuk --}}
         @if($s==='barang_masuk' && ($u->isAdminDivisi()||$u->isSuperadmin()) && $u->divisi_id===$pengajuan->divisi_id)
           <button class="btn btn-success mr-2" data-toggle="modal" data-target="#modalKonfirmasiTerima">
             <i class="fas fa-check-double mr-1"></i>Konfirmasi Terima Barang
           </button>
         @endif
 
-        @if(!in_array($s,['draft','diterima','ditolak','selesai']) && $u->canApprove())
+        {{-- Tombol Tolak: HANYA muncul jika status masih dalam tahap review (sebelum disetujui) --}}
+        @if(in_array($s, $statusBolehTolak) && $u->canApprove())
           <button class="btn btn-danger" data-toggle="modal" data-target="#modalTolak">
             <i class="fas fa-times mr-1"></i>Tolak
+          </button>
+        @elseif($statusFinal && $u->canApprove())
+          <button class="btn btn-secondary" disabled title="Pengajuan sudah disetujui, tidak dapat ditolak">
+            <i class="fas fa-lock mr-1"></i>Tolak (Tidak Tersedia)
           </button>
         @endif
       </div>

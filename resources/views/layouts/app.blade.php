@@ -101,7 +101,12 @@
 
         {{-- ── INVENTARIS ── --}}
         @if(auth()->user()->isPurchasing())
-          {{-- Purchasing: Data Barang read-only, Barang Masuk full akses (tugas inti mereka) --}}
+          {{--
+            PURCHASING:
+            - Data Barang  → lihat saja
+            - Barang Masuk → AKSES PENUH (tambah, edit, hapus) — tugas inti mereka
+            - Barang Keluar → tidak ada menu
+          --}}
           <li class="nav-header">INVENTARIS</li>
           <li class="nav-item">
             <a href="{{ route('barang.index') }}" class="nav-link {{ request()->routeIs('barang.*')?'active':'' }}">
@@ -113,13 +118,33 @@
               <i class="nav-icon fas fa-truck-loading"></i><p>Barang Masuk</p>
             </a>
           </li>
+
+        @elseif(auth()->user()->isAdminDivisi())
+          {{--
+            ADMIN DIVISI:
+            - Data Barang   → akses penuh
+            - Barang Masuk  → lihat saja
+            - Barang Keluar → akses penuh
+          --}}
+          <li class="nav-header">INVENTARIS</li>
           <li class="nav-item">
-            <a href="{{ route('barang-keluar.index') }}" class="nav-link {{ request()->routeIs('barang-keluar.*')?'active':'' }}">
-              <i class="nav-icon fas fa-arrow-circle-up"></i><p>Barang Keluar <small class="text-muted">(lihat)</small></p>
+            <a href="{{ route('barang.index') }}" class="nav-link {{ request()->routeIs('barang.*')?'active':'' }}">
+              <i class="nav-icon fas fa-box"></i><p>Data Barang</p>
             </a>
           </li>
-        @elseif(auth()->user()->isAdminDivisi() || auth()->user()->isSuperadmin())
-          {{-- Admin Divisi & Superadmin: akses penuh --}}
+          <li class="nav-item">
+            <a href="{{ route('barang-masuk.index') }}" class="nav-link {{ request()->routeIs('barang-masuk.*')?'active':'' }}">
+              <i class="nav-icon fas fa-truck-loading"></i><p>Barang Masuk <small class="text-muted">(lihat)</small></p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="{{ route('barang-keluar.index') }}" class="nav-link {{ request()->routeIs('barang-keluar.*')?'active':'' }}">
+              <i class="nav-icon fas fa-arrow-circle-up"></i><p>Barang Keluar</p>
+            </a>
+          </li>
+
+        @elseif(auth()->user()->isSuperadmin())
+          {{-- SUPERADMIN: akses penuh semua --}}
           <li class="nav-header">INVENTARIS</li>
           <li class="nav-item">
             <a href="{{ route('barang.index') }}" class="nav-link {{ request()->routeIs('barang.*')?'active':'' }}">
@@ -154,7 +179,6 @@
               @php
                 $u = auth()->user(); $pc = 0;
                 if ($u->isAdminDivisi()) {
-                  // Hitung yg perlu aksi admin: diajukan, review_admin, atau barang_masuk (perlu konfirmasi)
                   $pc = \App\Models\Pengajuan::where('divisi_id',$u->divisi_id)
                         ->whereIn('status',['diajukan','review_admin','barang_masuk'])->count();
                 } elseif ($u->isPurchasing()) {

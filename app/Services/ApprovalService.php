@@ -14,6 +14,19 @@ use Illuminate\Validation\ValidationException;
 
 class ApprovalService
 {
+    /**
+     * Status yang masih boleh ditolak — SEBELUM disetujui Direktur/Wadir.
+     * Begitu status mencapai 'disetujui' atau lebih lanjut, pengajuan
+     * dianggap FINAL dan tidak dapat ditolak lagi.
+     */
+    private const STATUS_BOLEH_TOLAK = [
+        StatusPengajuan::Diajukan,
+        StatusPengajuan::ReviewAdmin,
+        StatusPengajuan::Diteruskan,
+        StatusPengajuan::ProsesPurchasing,
+        StatusPengajuan::MenungguApproval,
+    ];
+
     public function submit(Pengajuan $p, User $u): Pengajuan
     {
         $this->ensure($p, StatusPengajuan::Draft);
@@ -72,7 +85,7 @@ class ApprovalService
         $this->ensureApprover($p, $u);
         return DB::transaction(function () use ($p, $u, $c) {
             $this->log($p, $u, 'setujui', StatusPengajuan::Disetujui, $c);
-            // Notif pemohon bahwa pengajuan disetujui
+            // Sejak titik ini status FINAL — tidak bisa ditolak lagi
             $p->user->notify(new PengajuanDisetujui($p));
             return $p;
         });
@@ -80,8 +93,6 @@ class ApprovalService
 
     /**
      * Purchasing: mulai proses pembelian setelah pengajuan disetujui.
-     * Status → proses_pembelian
-     * Admin divisi mendapat notifikasi bahwa barang sedang dibeli.
      */
     public function mulaiPembelian(Pengajuan $p, User $u, string $c = ''): Pengajuan
     {
@@ -89,22 +100,16 @@ class ApprovalService
 
         return DB::transaction(function () use ($p, $u, $c) {
             $this->log($p, $u, 'mulai_beli', StatusPengajuan::ProsesPembelian, $c);
-
-            // Notif semua admin divisi terkait
-            $admins = User::where('role', 'admin_divisi')
-                          ->where('divisi_id', $p->divisi_id)
-                          ->get();
+            $admins = User::where('role', 'admin_divisi')->where('divisi_id', $p->divisi_id)->get();
             foreach ($admins as $admin) {
                 $admin->notify(new BarangSedangDibeli($p));
             }
-
             return $p;
         });
     }
 
     /**
-     * Admin divisi: konfirmasi bahwa barang sudah diterima.
-     * Status → diterima (final)
+     * Admin divisi: konfirmasi bahwa barang sudah diterima. Status → diterima (final).
      */
     public function konfirmasiTerima(Pengajuan $p, User $u, string $c = ''): Pengajuan
     {
@@ -116,10 +121,23 @@ class ApprovalService
         );
     }
 
+    /**
+     * Tolak pengajuan.
+     * VALIDASI PENTING: hanya boleh dilakukan SEBELUM status mencapai 'disetujui'.
+     * Jika pengajuan sudah disetujui (atau status lanjutan lain seperti
+     * proses_pembelian / barang_masuk / diterima), penolakan ditolak oleh sistem
+     * meskipun request datang langsung ke endpoint (proteksi backend, bukan hanya UI).
+     */
     public function tolak(Pengajuan $p, User $u, string $alasan): Pengajuan
     {
         if (empty($alasan))
             throw ValidationException::withMessages(['alasan' => 'Alasan penolakan wajib diisi.']);
+
+        if (!in_array($p->status, self::STATUS_BOLEH_TOLAK, true)) {
+            throw ValidationException::withMessages([
+                'status' => "Pengajuan ini sudah berstatus '{$p->status->label()}' (final) dan tidak dapat ditolak lagi.",
+            ]);
+        }
 
         return DB::transaction(function () use ($p, $u, $alasan) {
             $this->log($p, $u, 'tolak', StatusPengajuan::Ditolak, $alasan);

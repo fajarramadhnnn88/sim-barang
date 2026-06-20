@@ -1,5 +1,7 @@
 <?php
+
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 
@@ -77,7 +79,9 @@ class BarangMasuk extends Model {
         });
     }
 
-    public function barang()    { return $this->belongsTo(Barang::class); }
+    // Perubahan ada di baris ini (menambahkan ->withTrashed())
+    public function barang()    { return $this->belongsTo(Barang::class)->withTrashed(); }
+    
     public function supplier()  { return $this->belongsTo(Supplier::class); }
     public function user()      { return $this->belongsTo(User::class); }
     public function pengajuan() { return $this->belongsTo(Pengajuan::class); }
