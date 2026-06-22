@@ -16,8 +16,9 @@ class ApprovalService
 {
     /**
      * Status yang masih boleh ditolak — SEBELUM disetujui Direktur/Wadir.
-     * Begitu status mencapai 'disetujui' atau lebih lanjut, pengajuan
-     * dianggap FINAL dan tidak dapat ditolak lagi.
+     * Begitu status mencapai 'disetujui' atau lebih lanjut (proses_pembelian,
+     * barang_masuk, diterima), pengajuan dianggap FINAL dan TIDAK BISA
+     * ditolak lagi, baik manual maupun otomatis oleh sistem.
      */
     private const STATUS_BOLEH_TOLAK = [
         StatusPengajuan::Diajukan,
@@ -26,6 +27,15 @@ class ApprovalService
         StatusPengajuan::ProsesPurchasing,
         StatusPengajuan::MenungguApproval,
     ];
+
+    /**
+     * Dipakai oleh command/scheduler untuk query pengajuan yang
+     * masih boleh kena auto-tolak (status masih dalam tahap review).
+     */
+    public static function statusBolehTolakValues(): array
+    {
+        return array_map(fn($s) => $s->value, self::STATUS_BOLEH_TOLAK);
+    }
 
     public function submit(Pengajuan $p, User $u): Pengajuan
     {
@@ -85,15 +95,11 @@ class ApprovalService
         $this->ensureApprover($p, $u);
         return DB::transaction(function () use ($p, $u, $c) {
             $this->log($p, $u, 'setujui', StatusPengajuan::Disetujui, $c);
-            // Sejak titik ini status FINAL — tidak bisa ditolak lagi
             $p->user->notify(new PengajuanDisetujui($p));
             return $p;
         });
     }
 
-    /**
-     * Purchasing: mulai proses pembelian setelah pengajuan disetujui.
-     */
     public function mulaiPembelian(Pengajuan $p, User $u, string $c = ''): Pengajuan
     {
         $this->ensure($p, StatusPengajuan::Disetujui);
@@ -108,9 +114,6 @@ class ApprovalService
         });
     }
 
-    /**
-     * Admin divisi: konfirmasi bahwa barang sudah diterima. Status → diterima (final).
-     */
     public function konfirmasiTerima(Pengajuan $p, User $u, string $c = ''): Pengajuan
     {
         $this->ensure($p, StatusPengajuan::BarangMasuk);
@@ -122,11 +125,8 @@ class ApprovalService
     }
 
     /**
-     * Tolak pengajuan.
-     * VALIDASI PENTING: hanya boleh dilakukan SEBELUM status mencapai 'disetujui'.
-     * Jika pengajuan sudah disetujui (atau status lanjutan lain seperti
-     * proses_pembelian / barang_masuk / diterima), penolakan ditolak oleh sistem
-     * meskipun request datang langsung ke endpoint (proteksi backend, bukan hanya UI).
+     * Tolak pengajuan (manual, dilakukan oleh seorang user).
+     * Hanya boleh dilakukan SEBELUM status mencapai 'disetujui'.
      */
     public function tolak(Pengajuan $p, User $u, string $alasan): Pengajuan
     {
@@ -141,6 +141,42 @@ class ApprovalService
 
         return DB::transaction(function () use ($p, $u, $alasan) {
             $this->log($p, $u, 'tolak', StatusPengajuan::Ditolak, $alasan);
+            $p->user->notify(new PengajuanDitolak($p, $alasan));
+            return $p;
+        });
+    }
+
+    /**
+     * Tolak pengajuan SECARA OTOMATIS oleh sistem (dipanggil dari
+     * scheduled command), karena tidak ada tindakan ACC dalam batas
+     * waktu yang ditentukan (2 minggu sejak tanggal_pengajuan).
+     *
+     * Dilindungi guard yang SAMA dengan tolak() manual — kalau status
+     * sudah 'disetujui' atau lebih lanjut (proses_pembelian, barang_masuk,
+     * diterima), method ini akan melempar exception dan TIDAK menolak.
+     * Jadi aman dipanggil massal tanpa perlu filter status di luar.
+     */
+    public function tolakOtomatis(Pengajuan $p): Pengajuan
+    {
+        if (!in_array($p->status, self::STATUS_BOLEH_TOLAK, true)) {
+            throw ValidationException::withMessages([
+                'status' => "Pengajuan {$p->no_pengajuan} sudah berstatus '{$p->status->label()}' — dilewati, tidak ditolak otomatis.",
+            ]);
+        }
+
+        // Aktor sistem: pakai akun superadmin pertama sebagai pencatat log,
+        // karena kolom user_id di approval_logs wajib diisi (tidak nullable).
+        $systemActor = User::where('role', 'superadmin')->first();
+        if (!$systemActor) {
+            throw ValidationException::withMessages([
+                'system' => 'Tidak ada akun superadmin untuk mencatat aksi sistem.',
+            ]);
+        }
+
+        $alasan = 'Ditolak otomatis oleh sistem karena tidak ada persetujuan (ACC) dalam waktu 14 hari sejak diajukan.';
+
+        return DB::transaction(function () use ($p, $systemActor, $alasan) {
+            $this->log($p, $systemActor, 'tolak', StatusPengajuan::Ditolak, $alasan);
             $p->user->notify(new PengajuanDitolak($p, $alasan));
             return $p;
         });
