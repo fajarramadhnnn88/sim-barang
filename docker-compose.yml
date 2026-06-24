@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  aplikasi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: laravel_app
+    restart: always
+    volumes:
+      - .:/var/www
+    networks:
+      - network-ujikom
+    depends_on:
+      - db
+    ports:
+      - "8081:80"
+    environment:
+      DB_HOST: db
+      DB_DATABASE: sim-barang
+      DB_USERNAME: root
+      DB_PASSWORD: secret
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 45s
+      timeout: 30s
+      retries: 3
+
+  webserver:
+    image: nginx:alpine
+    container_name: nginx_web
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - .:/var/www
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - aplikasi
+    networks:
+      - network-ujikom
+  db:
+    image: mysql:8.0
+    container_name: mysql_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: sim-barang
+      MYSQL_ROOT_PASSWORD: secret
+    volumes:
+      - volume-ujikom:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - network-ujikom
+
+volumes:
+  volume-ujikom:
+
+networks:
+  network-ujikom:
+    driver: bridge

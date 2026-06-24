@@ -22,18 +22,22 @@
     <li class="nav-item dropdown mr-1">
       <a class="nav-link position-relative px-3" data-toggle="dropdown" href="#">
         <i class="fas fa-bell" style="font-size:16px;color:#64748B"></i>
+        @auth
         @if(auth()->user()->unreadNotifications->count())
           <span class="badge badge-danger position-absolute" style="top:6px;right:6px;font-size:9px;padding:2px 5px;border-radius:50%">{{ auth()->user()->unreadNotifications->count() }}</span>
         @endif
+        @endauth
       </a>
       <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right" style="min-width:300px">
         <div class="px-3 py-2 d-flex justify-content-between align-items-center" style="border-bottom:1px solid #F1F5F9">
           <span style="font-weight:600;font-size:13px">Notifikasi</span>
+          @auth
           @if(auth()->user()->unreadNotifications->count())
           <form method="POST" action="{{ route('notifications.read') }}">@csrf
             <button class="btn btn-xs btn-outline-primary">Tandai dibaca</button>
           </form>
           @endif
+          @endauth
         </div>
         @forelse(auth()->user()->unreadNotifications->take(5) as $notif)
           <a class="dropdown-item py-2" href="{{ $notif->data['url']??'#' }}" style="white-space:normal;border-bottom:1px solid #F8FAFC">
